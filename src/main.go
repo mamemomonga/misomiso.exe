@@ -4,10 +4,11 @@ import (
 	"./config"
 	"./don"
 	"./store"
-	"fmt"
+	// "fmt"
 	"github.com/comail/colog"
 	"log"
 	"os"
+	"path/filepath"
 	//	"github.com/davecgh/go-spew/spew"
 )
 
@@ -35,24 +36,22 @@ func run(args []string) int {
 		colog.SetMinLevel(colog.LInfo)
 		colog.SetFormatter(&colog.StdFormatter{
 			Colors: true,
-			Flag:   log.Ldate | log.Ltime | log.Lshortfile,
+			Flag:   log.Ldate | log.Ltime,
 		})
 	}
 	colog.Register()
 
+
+	appdir := filepath.Dir(os.Args[0])
+
 	// スタートアップ
 	log.Printf("info: misomiso.exe version %s", Version)
-
-	if len(args) == 0 {
-		usage()
-		return 1
-	}
 
 	var err error
 
 	// config 読込
 	var cnf config.Config
-	cnf, err = config.Load(os.Args[1])
+	cnf, err = config.Load(filepath.Join(appdir,"config.yaml"))
 	if err != nil {
 		log.Printf("alert: %s", err)
 		return 1
@@ -60,7 +59,7 @@ func run(args []string) int {
 
 	// data読書
 	var stor *store.Store
-	stor, err = store.NewStore(cnf.DataFile)
+	stor, err = store.NewStore(filepath.Join(appdir,"data.yaml"))
 	if err != nil {
 		log.Print("alert: %s", err)
 		return 1
@@ -84,6 +83,3 @@ func run(args []string) int {
 	return 0
 }
 
-func usage() {
-	fmt.Printf("\n\n  USAGE: %s config.yaml\n\n", os.Args[0])
-}
