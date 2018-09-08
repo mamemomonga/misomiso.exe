@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"github.com/mattn/go-mastodon"
 	"log"
-	//	"github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
+	"time"
+	"regexp"
 )
 
 type Don struct {
@@ -15,9 +17,10 @@ type Don struct {
 	client        *mastodon.Client
 	client_id     string
 	client_secret string
-}
-
-type Config struct {
+	jst           *time.Location
+	startup_toot   string
+	search_regexp   string
+	timeout_counter time.Time
 }
 
 func NewDon(cnf *config.Config, stor *store.Store) (this *Don, err error) {
@@ -25,6 +28,9 @@ func NewDon(cnf *config.Config, stor *store.Store) (this *Don, err error) {
 	this.ctx = context.Background()
 	this.client_id = ""
 	this.client_secret = ""
+
+	this.startup_toot = cnf.StartupToot
+	this.search_regexp  = cnf.SearchRegexp
 
 	domain := cnf.Mastodon.Domain
 	email := cnf.Mastodon.Email
@@ -64,21 +70,180 @@ func NewDon(cnf *config.Config, stor *store.Store) (this *Don, err error) {
 	if err != nil {
 		return this, err
 	}
-	log.Printf("info: Mastodon Client Start %s", domain)
+
+	// 日本時間
+	this.jst = time.FixedZone("Asia/Tokyo", 9*60*60)
+
+	log.Printf("info: Start Clients %s", domain)
 	return
 }
 
-// トゥート
-func (this *Don) Toot(message string) (err error) {
-	toot := mastodon.Toot{Status: message}
-	status, err := this.client.PostStatus(this.ctx, &toot)
-	if err != nil {
-		return err
+// みそリスナー
+func (this *Don) MisoListener() (err error) {
+
+	// 自分のIDを得る
+	var self_id mastodon.ID
+	{
+		var account *mastodon.Account
+		account, err = this.client.GetAccountCurrentUser(this.ctx)
+		self_id = account.ID
+	}
+	log.Printf("SelfID: %s",self_id)
+
+
+	// みそみそを宣言する
+	{
+		toot := mastodon.Toot{ Status: fmt.Sprintf("%s #misomiso", this.startup_toot) }
+		_, err := this.client.PostStatus(this.ctx, &toot)
+		if err != nil {
+			return err
+		}
+		log.Printf("info: Toot %s", toot.Status)
 	}
 
-	_ = status
-	// spew.Dump(status)
-	log.Printf("info: Toot %s", message)
+	// 検索正規表現の設定
+	r := regexp.MustCompile(this.search_regexp)
+
+	// ステータス取得チャンネル
+	type chStatus struct {
+		m      string
+		status *mastodon.Status
+		err    error
+	}
+	chs := make(chan chStatus)
+	defer close(chs)
+
+	// WebSocketクライアント
+	wsc := this.client.NewWSClient()
+
+	// LTL接続
+	go func() {
+		q,err := wsc.StreamingWSPublic(this.ctx, true)
+		if err != nil {
+			chs <- chStatus{ m: "LTL", status: nil, err: err }
+			return
+		}
+		for e := range q {
+			if u,ok := e.(*mastodon.UpdateEvent); ok {
+				chs <- chStatus{ m: "LTL", status: u.Status, err: nil }
+			}
+		}
+		return
+	}()
+
+	// HTL接続
+	go func() {
+		q,err := wsc.StreamingWSUser(this.ctx)
+		if err != nil {
+			chs <- chStatus{ m: "HTL", status: nil, err: err }
+			return
+		}
+		for e := range q {
+			if u,ok := e.(*mastodon.UpdateEvent); ok {
+				chs <- chStatus{ m: "HTL", status: u.Status, err: nil }
+			}
+		}
+		return
+	}()
+
+	this.timeout_counter = time.Now()
+
+	// タイムアウト
+	go func() {
+		for {
+			dur := time.Now().Sub(this.timeout_counter)
+			log.Printf("trace: Wait %3.0f sec", dur.Seconds())
+			// 1分間トゥートがみつからなかったら終了
+			if(dur > (time.Second * 60 * 1)) {
+				chs <- chStatus{ m: "TIMEOUT", status: nil , err: nil }
+			}
+			time.Sleep(time.Second)
+		}
+	}()
+
+	for {
+		cst := <-chs
+
+		// エラーを受信
+		if cst.err != nil {
+			return cst.err
+		}
+
+		// タイムアウトを受信
+		if cst.m == "TIMEOUT" {
+			log.Print("info: TIMEOUT")
+			return
+		}
+
+		// log.Printf(" --- timeline: %s ---",cst.timeline)
+		// log.Print(cst.status.Content)
+
+		// みそ喰い
+		err = this.miso_eater(cst.status, self_id, r)
+		if err != nil {
+			return
+		}
+	}
+	return nil
+}
+
+// みそ喰い
+func (this *Don) miso_eater(status *mastodon.Status, self_id mastodon.ID, r *regexp.Regexp ) (err error) {
+
+	// ファボと結果表示
+	fabres := func(s *mastodon.Status){
+
+		// ブーストしてたら除外
+		if s.Reblogged == true {
+			return
+		}
+
+		// ファボってなかったらファボる
+		if s.Favourited == false {
+			_,err := this.client.Favourite(this.ctx, s.ID)
+			if err != nil {
+				log.Printf("warn: Favourite %s",err)
+				spew.Dump(s)
+			}
+		}
+		// ログ表示
+		log.Printf("info: %s %s %s %s",
+			s.ID,
+			s.CreatedAt.In(this.jst).Format(time.RFC3339),
+			s.Account.DisplayName,
+			s.Content,
+		)
+	}
+
+	// 自分は除外
+	if status.Account.ID == self_id {
+		return nil
+	}
+
+	// 検索対象以外は除外
+	if(! r.MatchString(status.Content)) {
+		return nil
+	}
+
+	// ブーストしてたら除外
+	if status.Reblogged == true {
+		return nil
+	}
+
+	// ブーストされた投稿か？
+	if status.Reblog != nil {
+		fabres(status.Reblog)
+	} else {
+		fabres(status)
+	}
+
+	// ブーストする
+	_,err = this.client.Reblog(this.ctx, status.ID)
+	this.timeout_counter = time.Now()
+	if err != nil {
+		log.Printf("warn: Reblog %s",err)
+	}
 
 	return nil
 }
+

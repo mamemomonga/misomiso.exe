@@ -13,8 +13,8 @@ RUN set -xe && \
 		upx-ucl && \
 	rm -rf /var/lib/apt/lists/*
 
-COPY bin/get-external-modules.sh /opt/get-external-modules.sh
+COPY modules.sh /opt/modules.sh
 
 RUN set -xe && \
-	/opt/get-external-modules.sh
+	/opt/modules.sh
 

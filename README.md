@@ -4,10 +4,11 @@
 
 # 便利な使い方(Windows)
 
-1 [こちらから](https://github.com/mamemomonga/misomiso.exe/releases) misomiso.exe をダウンロードします。
+1. [こちらから](https://github.com/mamemomonga/misomiso.exe/releases) misomiso.exe をダウンロードします。
 
-2 misomiso.exe と同じフォルダに
-以下のような内容を自分のマストドンログイン情報に書き換えて
+2. misomiso.exe と同じフォルダに
+以下のような内容を自分のマストドンログイン情報に書き換えます
+
 config.yaml という名前で保存します。
 
 	mastodon:
@@ -17,5 +18,9 @@ config.yaml という名前で保存します。
 
 ファイルはYAML形式です。インデントは必須でタブ文字は使えません。
 
-3 misomiso.exe をダブルクリックすると、「みそみそ〜」と投稿されます。
+3. misomiso.exe をダブルクリックすると、「みそみそ〜」と投稿されます。
+
+4. そのあとLTLとHTLで発見したすべての「みそみそ」を含むトゥートをブーストとファボします。
+
+5. 60秒間それらのトゥートを発見できなかったら終了します
 

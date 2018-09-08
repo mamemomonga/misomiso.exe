@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	//	"github.com/davecgh/go-spew/spew"
+	"flag"
 )
 
 var (
@@ -36,11 +37,11 @@ func run(args []string) int {
 		colog.SetMinLevel(colog.LInfo)
 		colog.SetFormatter(&colog.StdFormatter{
 			Colors: true,
+			// Flag:   log.Ldate | log.Ltime | log.Lshortfile,
 			Flag:   log.Ldate | log.Ltime,
 		})
 	}
 	colog.Register()
-
 
 	appdir := filepath.Dir(os.Args[0])
 
@@ -56,6 +57,22 @@ func run(args []string) int {
 		log.Printf("alert: %s", err)
 		return 1
 	}
+
+	// フラグの取得
+	{
+		// -t 開始宣言トゥート
+		var t = flag.String("t", "みそみそ〜", "Start Up toot")
+
+		// -r 検索正規表現
+		var r = flag.String("r", "みそみそ", "Search Regexp")
+
+		flag.Parse()
+		cnf.StartupToot = *t
+		cnf.SearchRegexp = *r
+	}
+
+	log.Printf("info: STARTUP %s",cnf.StartupToot)
+	log.Printf("info: REGEXP  %s",cnf.SearchRegexp)
 
 	// data読書
 	var stor *store.Store
@@ -73,8 +90,8 @@ func run(args []string) int {
 		return 1
 	}
 
-	// トゥート
-	err = dn.Toot("みそみそ〜")
+	// みそリスナー
+	err = dn.MisoListener()
 	if err != nil {
 		log.Print("alert: %s", err)
 		return 1
