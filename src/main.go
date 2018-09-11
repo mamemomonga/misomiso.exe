@@ -38,7 +38,7 @@ func run(args []string) int {
 		colog.SetFormatter(&colog.StdFormatter{
 			Colors: true,
 			// Flag:   log.Ldate | log.Ltime | log.Lshortfile,
-			Flag:   log.Ldate | log.Ltime,
+			Flag: log.Ldate | log.Ltime,
 		})
 	}
 	colog.Register()
@@ -52,7 +52,7 @@ func run(args []string) int {
 
 	// config 読込
 	var cnf config.Config
-	cnf, err = config.Load(filepath.Join(appdir,"config.yaml"))
+	cnf, err = config.Load(filepath.Join(appdir, "config.yaml"))
 	if err != nil {
 		log.Printf("alert: %s", err)
 		return 1
@@ -71,12 +71,12 @@ func run(args []string) int {
 		cnf.SearchRegexp = *r
 	}
 
-	log.Printf("info: STARTUP %s",cnf.StartupToot)
-	log.Printf("info: REGEXP  %s",cnf.SearchRegexp)
+	log.Printf("info: STARTUP %s", cnf.StartupToot)
+	log.Printf("info: REGEXP  %s", cnf.SearchRegexp)
 
 	// data読書
 	var stor *store.Store
-	stor, err = store.NewStore(filepath.Join(appdir,"data.yaml"))
+	stor, err = store.NewStore(filepath.Join(appdir, "data.yaml"))
 	if err != nil {
 		log.Print("alert: %s", err)
 		return 1
@@ -99,4 +99,3 @@ func run(args []string) int {
 
 	return 0
 }
-

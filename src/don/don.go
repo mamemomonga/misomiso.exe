@@ -5,11 +5,12 @@ import (
 	"../store"
 	"context"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/mattn/go-mastodon"
 	"log"
-	"github.com/davecgh/go-spew/spew"
-	"time"
 	"regexp"
+	"sync"
+	"time"
 )
 
 type Don struct {
@@ -18,9 +19,14 @@ type Don struct {
 	client_id     string
 	client_secret string
 	jst           *time.Location
-	startup_toot   string
-	search_regexp   string
-	timeout_counter time.Time
+	startup_toot  string
+	search_regexp string
+	timeout       timeoutCounter
+}
+
+type timeoutCounter struct {
+	t time.Time
+	m *sync.Mutex
 }
 
 func NewDon(cnf *config.Config, stor *store.Store) (this *Don, err error) {
@@ -30,7 +36,7 @@ func NewDon(cnf *config.Config, stor *store.Store) (this *Don, err error) {
 	this.client_secret = ""
 
 	this.startup_toot = cnf.StartupToot
-	this.search_regexp  = cnf.SearchRegexp
+	this.search_regexp = cnf.SearchRegexp
 
 	domain := cnf.Mastodon.Domain
 	email := cnf.Mastodon.Email
@@ -88,12 +94,11 @@ func (this *Don) MisoListener() (err error) {
 		account, err = this.client.GetAccountCurrentUser(this.ctx)
 		self_id = account.ID
 	}
-	log.Printf("SelfID: %s",self_id)
-
+	log.Printf("SelfID: %s", self_id)
 
 	// みそみそを宣言する
 	{
-		toot := mastodon.Toot{ Status: fmt.Sprintf("%s #misomiso", this.startup_toot) }
+		toot := mastodon.Toot{Status: fmt.Sprintf("%s #misomiso", this.startup_toot)}
 		_, err := this.client.PostStatus(this.ctx, &toot)
 		if err != nil {
 			return err
@@ -118,14 +123,14 @@ func (this *Don) MisoListener() (err error) {
 
 	// LTL接続
 	go func() {
-		q,err := wsc.StreamingWSPublic(this.ctx, true)
+		q, err := wsc.StreamingWSPublic(this.ctx, true)
 		if err != nil {
-			chs <- chStatus{ m: "LTL", status: nil, err: err }
+			chs <- chStatus{m: "LTL", status: nil, err: err}
 			return
 		}
 		for e := range q {
-			if u,ok := e.(*mastodon.UpdateEvent); ok {
-				chs <- chStatus{ m: "LTL", status: u.Status, err: nil }
+			if u, ok := e.(*mastodon.UpdateEvent); ok {
+				chs <- chStatus{m: "LTL", status: u.Status, err: nil}
 			}
 		}
 		return
@@ -133,29 +138,35 @@ func (this *Don) MisoListener() (err error) {
 
 	// HTL接続
 	go func() {
-		q,err := wsc.StreamingWSUser(this.ctx)
+		q, err := wsc.StreamingWSUser(this.ctx)
 		if err != nil {
-			chs <- chStatus{ m: "HTL", status: nil, err: err }
+			chs <- chStatus{m: "HTL", status: nil, err: err}
 			return
 		}
 		for e := range q {
-			if u,ok := e.(*mastodon.UpdateEvent); ok {
-				chs <- chStatus{ m: "HTL", status: u.Status, err: nil }
+			if u, ok := e.(*mastodon.UpdateEvent); ok {
+				chs <- chStatus{m: "HTL", status: u.Status, err: nil}
 			}
 		}
 		return
 	}()
 
-	this.timeout_counter = time.Now()
+	this.timeout = timeoutCounter{
+		t: time.Now(),
+		m: new(sync.Mutex),
+	}
 
 	// タイムアウト
 	go func() {
 		for {
-			dur := time.Now().Sub(this.timeout_counter)
+			this.timeout.m.Lock()
+			dur := time.Now().Sub(this.timeout.t)
+			this.timeout.m.Unlock()
+
 			log.Printf("trace: Wait %3.0f sec", dur.Seconds())
 			// 1分間トゥートがみつからなかったら終了
-			if(dur > (time.Second * 60 * 1)) {
-				chs <- chStatus{ m: "TIMEOUT", status: nil , err: nil }
+			if dur > (time.Second * 60 * 1) {
+				chs <- chStatus{m: "TIMEOUT", status: nil, err: nil}
 			}
 			time.Sleep(time.Second)
 		}
@@ -188,10 +199,10 @@ func (this *Don) MisoListener() (err error) {
 }
 
 // みそ喰い
-func (this *Don) miso_eater(status *mastodon.Status, self_id mastodon.ID, r *regexp.Regexp ) (err error) {
+func (this *Don) miso_eater(status *mastodon.Status, self_id mastodon.ID, r *regexp.Regexp) (err error) {
 
 	// ファボと結果表示
-	fabres := func(s *mastodon.Status){
+	fabres := func(s *mastodon.Status) {
 
 		// ブーストしてたら除外
 		if s.Reblogged == true {
@@ -200,9 +211,9 @@ func (this *Don) miso_eater(status *mastodon.Status, self_id mastodon.ID, r *reg
 
 		// ファボってなかったらファボる
 		if s.Favourited == false {
-			_,err := this.client.Favourite(this.ctx, s.ID)
+			_, err := this.client.Favourite(this.ctx, s.ID)
 			if err != nil {
-				log.Printf("warn: Favourite %s",err)
+				log.Printf("warn: Favourite %s", err)
 				spew.Dump(s)
 			}
 		}
@@ -221,7 +232,7 @@ func (this *Don) miso_eater(status *mastodon.Status, self_id mastodon.ID, r *reg
 	}
 
 	// 検索対象以外は除外
-	if(! r.MatchString(status.Content)) {
+	if !r.MatchString(status.Content) {
 		return nil
 	}
 
@@ -238,12 +249,13 @@ func (this *Don) miso_eater(status *mastodon.Status, self_id mastodon.ID, r *reg
 	}
 
 	// ブーストする
-	_,err = this.client.Reblog(this.ctx, status.ID)
-	this.timeout_counter = time.Now()
+	_, err = this.client.Reblog(this.ctx, status.ID)
+	this.timeout.m.Lock()
+	this.timeout.t = time.Now()
+	this.timeout.m.Unlock()
 	if err != nil {
-		log.Printf("warn: Reblog %s",err)
+		log.Printf("warn: Reblog %s", err)
 	}
 
 	return nil
 }
-

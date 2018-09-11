@@ -7,11 +7,11 @@ import (
 )
 
 type Config struct {
-	DataFile   string    `yaml:"data_file"`
-	ClientName string    `yaml:"client_name"`
-	Mastodon   CMastodon `yaml:"mastodon"`
-	StartupToot string   `yaml:"startup_toot"`
-	SearchRegexp string   `yaml:"serch_regexp"`
+	DataFile     string    `yaml:"data_file"`
+	ClientName   string    `yaml:"client_name"`
+	Mastodon     CMastodon `yaml:"mastodon"`
+	StartupToot  string    `yaml:"startup_toot"`
+	SearchRegexp string    `yaml:"serch_regexp"`
 }
 
 type CMastodon struct {
