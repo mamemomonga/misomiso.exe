@@ -38,6 +38,8 @@ config.yaml という名前で保存します。
 * Docker
 * Bash
 
+macOS High Sierra にて動作確認を行っています。
+
 ## ビルド方法
 
 build.sh のまん中あたりにあるところで、ビルドしたいターゲットのコメントを外してください。
