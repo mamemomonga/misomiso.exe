@@ -22,10 +22,16 @@ type Don struct {
 	startup_toot  string
 	search_regexp string
 	timeout       timeoutCounter
+	boost         boostCounter
 }
 
 type timeoutCounter struct {
 	t time.Time
+	m *sync.Mutex
+}
+
+type boostCounter struct {
+	c int
 	m *sync.Mutex
 }
 
@@ -118,6 +124,18 @@ func (this *Don) MisoListener() (err error) {
 	chs := make(chan chStatus)
 	defer close(chs)
 
+	// タイムアウトカウンタの初期化
+	this.timeout = timeoutCounter{
+		t: time.Now(),
+		m: new(sync.Mutex),
+	}
+
+	// ブーストカウンターの初期化
+	this.boost = boostCounter{
+		c: 0,
+		m: new(sync.Mutex),
+	}
+
 	// WebSocketクライアント
 	wsc := this.client.NewWSClient()
 
@@ -151,11 +169,6 @@ func (this *Don) MisoListener() (err error) {
 		return
 	}()
 
-	this.timeout = timeoutCounter{
-		t: time.Now(),
-		m: new(sync.Mutex),
-	}
-
 	// タイムアウト
 	go func() {
 		for {
@@ -183,6 +196,14 @@ func (this *Don) MisoListener() (err error) {
 		// タイムアウトを受信
 		if cst.m == "TIMEOUT" {
 			log.Print("info: TIMEOUT")
+			this.boost.m.Lock()
+			toot := mastodon.Toot{Status: fmt.Sprintf("実績報告 %d %s\r\n捕捉終了しました。#misomiso", this.boost.c, this.startup_toot)}
+			this.boost.m.Unlock()
+			_, err = this.client.PostStatus(this.ctx, &toot)
+			if err != nil {
+				return err
+			}
+			log.Printf("info: Toot %s", toot.Status)
 			return
 		}
 
@@ -250,12 +271,17 @@ func (this *Don) miso_eater(status *mastodon.Status, self_id mastodon.ID, r *reg
 
 	// ブーストする
 	_, err = this.client.Reblog(this.ctx, status.ID)
-	this.timeout.m.Lock()
-	this.timeout.t = time.Now()
-	this.timeout.m.Unlock()
 	if err != nil {
 		log.Printf("warn: Reblog %s", err)
 	}
+
+	this.timeout.m.Lock()
+	this.timeout.t = time.Now()
+	this.timeout.m.Unlock()
+
+	this.boost.m.Lock()
+	this.boost.c++
+	this.boost.m.Unlock()
 
 	return nil
 }
