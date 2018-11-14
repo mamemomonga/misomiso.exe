@@ -40,6 +40,7 @@
 コマンド
 
 	$ git clone https://github.com/mamemomonga/misomiso.exe $GOPATH/src/github.com/mamemomonga/misomiso.exe
+	$ cd $GOPATH/src/github.com/mamemomonga/misomiso.exe
 	$ make deps
 	$ make run
 	$ make
