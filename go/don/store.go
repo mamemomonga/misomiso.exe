@@ -1,4 +1,4 @@
-package store
+package don
 
 import (
 	"gopkg.in/yaml.v2"
@@ -9,14 +9,14 @@ import (
 
 type Store struct {
 	filename string
-	Data     Data
+	Data     SData
 }
 
-type Data struct {
-	Apps map[string]App
+type SData struct {
+	Apps map[string]SApp
 }
 
-type App struct {
+type SApp struct {
 	ClientID     string
 	ClientSecret string
 }
@@ -26,7 +26,7 @@ func NewStore(filename string) (this *Store, err error) {
 	this = new(Store)
 
 	this.filename = filename
-	this.Data = Data{map[string]App{}}
+	this.Data = SData{map[string]SApp{}}
 
 	if b, _ := exists(filename); b == false {
 		log.Printf("trace: Create %s", filename)
@@ -79,3 +79,4 @@ func exists(path string) (bool, error) {
 	}
 	return true, err
 }
+

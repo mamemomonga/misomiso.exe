@@ -1,0 +1,8 @@
+mastodon:
+   domain:   mstdn.jp
+   email:    user@password
+   password: password
+
+client_name: "misomiso.exe"
+
+timeout: 60

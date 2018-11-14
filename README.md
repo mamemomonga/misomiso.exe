@@ -2,47 +2,54 @@
 
 みそみそ〜、とマストドンでつぶやく専用コマンドラインアプリケーションです。
 
-# 便利な使い方(Windows)
+# 利用方法
 
-1. [こちらから](https://github.com/mamemomonga/misomiso.exe/releases) misomiso.exe をダウンロードします。
+* [リリースページ](https://github.com/mamemomonga/misomiso.exe/releases) からバイナリをダウンロードします。
+* Linux, macOSの場合は実行権限をつけてください。
+* Windowsの場合はセキュリティー警告が表示される場合があります。
+* [etc/config-example.yaml](etc/config-example.yaml)を参考にconfig.yamlを作成してください。
 
-2. misomiso.exe と同じフォルダに
-以下のような内容を自分のマストドンログイン情報に書き換えます
+実行例
 
-config.yaml という名前で保存します。
+	./misomiso-darwin-amd64 -config ./etc/config.yaml -target 'ゆゆ式' -regexp '(ゆゆ(式|しき)|yysk|yuyush?iki)'
 
-	mastodon:
-	   domain: mstdn.jp
-	   email: example@example.com
-	   password: password
+# コマンドラインオプション
 
-ファイルはYAML形式です。インデントは必須でタブ文字は使えません。
+* -config  Configファイルを指定します
+* -target  キーワードを指定します
+* -regexp  正規表現を指定します
 
-3. misomiso.exe をダブルクリックすると、「みそみそ〜」と投稿されます。
+# 開発
 
-4. そのあとLTLとHTLで発見したすべての「みそみそ」を含むトゥートをブーストとファボします。(みそチェイサー機能)
+## ビルド環境
 
-5. 60秒間それらのトゥートを発見できなかったら終了します
+事前に必要なもの
 
-## コマンドラインオプション
+* make
+* go
 
-	--help ヘルプ表示
-	-r     検索用正規表現設定
-	-t     開始宣言文言設定
+導入されてない場合導入されるもの
+		
+* dep
 
+### 準備
 
-# ビルド
+* GOPATHが正しく設定されている必要があります。
+* make deps を実行すると、dep eusure が実行されます。depが導入されていない場合は導入されます。
 
-## 必要なもの
+コマンド
 
-* Docker
-* Bash
+	$ git clone https://github.com/mamemomonga/misomiso.exe $GOPATH/src/github.com/mamemomonga/misomiso.exe
+	$ make deps
+	$ make run
+	$ make
 
-macOS High Sierra にて動作確認を行っています。
+### リリース向けビルド
 
-## ビルド方法
+* 公開用のバイナリが生成されます。
+* Dockerが必要です。
 
-build.sh のまん中あたりにあるところで、ビルドしたいターゲットのコメントを外してください。
+コマンド
 
-	$ ./build.sh
+	$ make release
 

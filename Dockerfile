@@ -1,20 +1,24 @@
-FROM golang:1.10-stretch
+FROM golang:1.11.2-alpine3.8
 
 RUN set -xe && \
-	rm /etc/localtime && \
-	ln -s /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
-	echo 'Asia/Tokyo' > /etc/timezone
-
-
-RUN set -xe && \
-	export DEBIAN_FRONTEND=noninteractive && \
-	apt-get update && \
-	apt-get install -y --no-install-recommends \
-		upx-ucl && \
-	rm -rf /var/lib/apt/lists/*
-
-COPY modules.sh /opt/modules.sh
+	apk --update add tzdata && \
+	cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
+	apk del tzdata && \
+	rm -rf /var/cache/apk/*
 
 RUN set -xe && \
-	/opt/modules.sh
+	apk --update add \
+		make curl git && \
+	rm -rf /var/cache/apk/*
 
+ARG APPPATH
+
+ADD . /go/src/${APPPATH}
+
+RUN set -xe && \
+	cd /go/src/${APPPATH} && \
+	make deps
+
+RUN set -xe && \
+	cd /go/src/${APPPATH} && \
+	make dcr-release-build

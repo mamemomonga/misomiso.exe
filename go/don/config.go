@@ -1,4 +1,4 @@
-package config
+package don
 
 import (
 	"gopkg.in/yaml.v2"
@@ -9,9 +9,8 @@ import (
 type Config struct {
 	DataFile     string    `yaml:"data_file"`
 	ClientName   string    `yaml:"client_name"`
+	Timeout      int       `yaml:"timeout"`
 	Mastodon     CMastodon `yaml:"mastodon"`
-	StartupToot  string    `yaml:"startup_toot"`
-	SearchRegexp string    `yaml:"serch_regexp"`
 }
 
 type CMastodon struct {
@@ -20,19 +19,21 @@ type CMastodon struct {
 	Password string
 }
 
-func Load(filename string) (cnf Config, err error) {
+func (this *Don) loadConfig(filename string) error {
+
+	var cnf Config
 
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return cnf, err
+		return err
 	}
 
 	err = yaml.Unmarshal(buf, &cnf)
 	if err != nil {
-		return cnf, err
+		return err
 	}
 
 	log.Printf("trace: Load %s", filename)
-
-	return cnf, nil
+	this.config = cnf
+	return nil
 }
