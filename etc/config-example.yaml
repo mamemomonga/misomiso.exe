@@ -1,6 +1,6 @@
 mastodon:
    domain:   mstdn.jp
-   email:    user@password
+   email:    email@address.com
    password: password
 
 client_name: "misomiso.exe"
