@@ -24,7 +24,7 @@ clean:
 	rm -rf bin vendor release
 
 run:
-	cd go/cmd/$(NAME); go run *.go
+	cd go/cmd/$(NAME); go run *.go -config "$(CURDIR)/etc/config.yaml" -target "みそみそ" -regexp "みそ"
 
 # -----------------------
 
