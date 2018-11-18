@@ -1,8 +1,16 @@
+
+# マストドンログイン情報
 mastodon:
    domain:   mstdn.jp
    email:    email@address.com
    password: password
 
+# クライアント名
 client_name: "misomiso.exe"
 
+# タイムアウト時間
 timeout: 60
+
+# チャージ時間
+charge_time: 15
+

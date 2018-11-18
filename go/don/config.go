@@ -10,6 +10,7 @@ type Config struct {
 	DataFile     string    `yaml:"data_file"`
 	ClientName   string    `yaml:"client_name"`
 	Timeout      int       `yaml:"timeout"`
+	ChargeTime   int       `yaml:"charge_time"`
 	Mastodon     CMastodon `yaml:"mastodon"`
 }
 

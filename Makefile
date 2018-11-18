@@ -25,6 +25,7 @@ clean:
 
 run:
 	cd go/cmd/$(NAME); go run *.go -config "$(CURDIR)/etc/config.yaml" -target "みそみそ" -regexp "みそ"
+	# cd go/cmd/$(NAME); go run *.go -config "$(CURDIR)/etc/config.yaml" -target 'ゆゆ式' -regexp '(ゆゆ(式|しき)|yysk|yuyush?iki)'
 
 # -----------------------
 
