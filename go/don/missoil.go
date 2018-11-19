@@ -322,7 +322,7 @@ func (this *Launcher) detectTimeout() {
 		this.m.Unlock()
 
 		// debug
-		log.Printf("trace: Remain %3.2f sec", r.Seconds())
+		//log.Printf("trace: Remain %3.2f sec", r.Seconds())
 
 		if r <= 0 {
 			this.ch <- Gfstatus{m: "TIMEOUT", status: nil, err: nil}
