@@ -187,7 +187,12 @@ func (this *Launcher) favBooster(s Gfstatus) {
 	}
 
 	// 最後にブーストしたユーザで、同じ内容なら除外
-	if ( this.last_boosted.user == s.status.Account.URL ) && ( this.last_boosted.content == s.status.Content ) {
+	// if ( this.last_boosted.user == s.status.Account.URL ) && ( this.last_boosted.content == s.status.Content ) {
+	// 	return
+	// }
+
+	// 最後にブーストしたユーザなら除外
+	if this.last_boosted.user == s.status.Account.URL  {
 		return
 	}
 
@@ -208,9 +213,12 @@ func (this *Launcher) favBooster(s Gfstatus) {
 
 	// ブーストする
 	bst, err := this.don.client.Reblog(this.don.ctx, s.status.ID) // *mastodon.Status, error
+
 	if err != nil {
-		log.Printf("warn: Reblog %s", err)
+		log.Printf("warn: REBLOG %s", err)
+		return
 	}
+
 	this.cb.Boost()
 
 	// ロック
