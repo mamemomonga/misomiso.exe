@@ -89,25 +89,34 @@ func (this *MisoPunch) cBoosted() {
 
 func (this *MisoPunch) cReportFinish(r don.LauncherReport) {
 
-	mbs := []string{}
-	for _,i := range r.Members {
-		mbs = append(mbs, i+" さん")
-	}
-	mb := strings.Join( mbs,", ")
-
 	e := fmt.Sprintf("%.0f分%02d秒",r.Elapsed.Truncate(time.Minute).Minutes(), int(r.Elapsed.Seconds()) % 60 )
 
 	var n string
 	if r.Hit == 0 {
-		n = fmt.Sprintf("[自爆]\n戦果: %d%s\n飛行時間: %s\n追尾終了しました。#misomiso",
-		r.Hit, this.Keyword, e )
-
+		n = fmt.Sprintf("[自爆]\n戦果: %d%s\n飛行時間: %s\n追尾終了しました。#misomiso", r.Hit, this.Keyword, e )
 	} else {
-		n = fmt.Sprintf("[自爆]\n戦果: %d%s\n飛行時間: %s\n追尾終了しました。\n%s ありがとうございました。#misomiso",
-			r.Hit, this.Keyword, e, mb )
+		n = fmt.Sprintf("[自爆]\n戦果: %d%s\n飛行時間: %s\n追尾終了しました。#misomiso",r.Hit, this.Keyword, e)
 	}
-
 	this.d.Toot(n)
+
+	// みそみそなメンバーを紹介するぜ！
+	if r.Hit > 0 {
+		pos := 0
+		posl := len(r.Members)
+		for pos < posl {
+			mbs := []string{}
+			for i:=0; i< 10; i++ {
+				if pos < posl {
+					mbs = append(mbs,r.Members[pos]+"さん")
+					pos++
+				}
+			}
+			mb := strings.Join(mbs,"\n")
+			n = fmt.Sprintf("[今日の %s なみなさん] \n%s #misomiso", this.Keyword, mb)
+			this.d.Toot(n)
+		}
+		this.d.Toot("ありがとうございました★ #misomiso")
+	}
 }
 
 func (this *MisoPunch) cReportRunning(r don.LauncherReport) {
